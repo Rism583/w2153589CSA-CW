@@ -100,3 +100,19 @@ Conversely, **Query Parameters** (e.g., `/sensors?type=CO2`) are designed specif
 * **Standardization:** It follows industry-standard conventions, making the API more intuitive for frontend developers to consume without having to constantly check the documentation.
 
 ---
+
+## 📊 Part 4: Historical Data & Sub-Resource Routing
+
+> **Question 4.1:** Discuss the architectural benefits of the Sub-Resource Locator pattern. How does delegating logic to separate classes help manage complexity in large APIs compared to defining every nested path (e.g., `sensors/{id}/readings/{rid}`) in one massive controller class?
+
+### 💡 Answer
+
+During the development of this API, I realized that routing every single endpoint through one controller is a major architectural flaw. If I had defined every nested path (like `/sensors/{id}/readings` and `/sensors/{id}/readings/{rid}`) directly inside my `SensorResource` class, it would have quickly bloated into an unmaintainable "God Class" that tries to handle too many responsibilities.
+
+By implementing the **Sub-Resource Locator pattern**, I structured the API in a much smarter way and gained several key benefits:
+
+1. **Separation of Concerns (Single Responsibility):** My `SensorResource` class is now strictly responsible for managing the root sensor objects. As soon as a request asks for a specific sensor's history, it immediately delegates the job to `SensorReadingResource`. Each class has one clear, focused job.
+2. **Reduced Boilerplate Code:** Because my locator method extracts the `{sensorId}` from the URL and passes it directly into the constructor of `SensorReadingResource`, the new class inherently "knows" which sensor it is working with. I don't have to redundantly add `@PathParam("sensorId")` to every single method inside the historical controller, which makes the code much cleaner.
+3. **Team Scalability:** If the university decides later that they want to add even deeper nested paths (for example, `/sensors/{id}/readings/{rid}/calibrations`), I can just chain another sub-resource locator. This modular approach means a team of developers could work on different sub-resources at the same time without constantly causing Git merge conflicts in one massive file.
+
+---
