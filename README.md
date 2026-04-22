@@ -35,3 +35,34 @@ This approach offers massive benefits to client developers compared to relying s
 * **Decoupling and Resilience:** Without HATEOAS, client applications must hardcode API URLs (e.g., `fetch("http://api.university.edu/api/v1/rooms")`). If the backend team decides to change the routing structure later, every client application breaks. With HATEOAS, the client simply navigates to the root API and follows the provided `_links` dynamically. The server can change URIs at any time without breaking the frontend.
 * **Discoverability:** Just like a human navigates a website by clicking visible links rather than guessing URLs, a HATEOAS-compliant API guides the client. The client discovers what actions are currently available based on the links provided in the response payload.
 * **Reduced Developer Friction:** Client developers do not need to constantly cross-reference external static documentation to figure out how to access related resources. The API tells them exactly where to go next directly within the JSON response, significantly speeding up frontend development and integration.
+
+## 🚪 Part 2: Room Management
+
+> **Question 2.1:** When returning a list of rooms, what are the implications of returning only IDs versus returning the full room objects? Consider network bandwidth and client side processing.
+
+### 💡 Answer
+
+The decision between returning just IDs or full objects comes down to a trade-off between initial bandwidth and the "N+1 query problem."
+
+If I were to return only a list of Room IDs (e.g., `["LIB-301", "LEC-102"]`), the initial payload would be very small, conserving initial network bandwidth. However, this shifts a massive burden onto the client side. If the frontend campus dashboard needs to actually display the room names and capacities to the user, the client application would have to make one request to get the list of IDs, and then *N* additional asynchronous GET requests to fetch the details for every single room. This creates significant network latency overhead and complicates client-side processing.
+
+In my implementation, I chose to return the **full room objects**. While this slightly increases the size of the initial JSON payload (using more bandwidth per request), it drastically improves overall efficiency. The client receives all the necessary rendering data in a single HTTP round-trip. This simplifies the frontend logic, reduces the total number of connections the server has to handle, and makes the application interface feel much faster and more responsive for the end user.
+
+---
+
+> **Question 2.2:** Is the DELETE operation idempotent in your implementation? Provide a detailed justification by describing what happens if a client mistakenly sends the exact same DELETE request for a room multiple times.
+
+### 💡 Answer
+
+Yes, the `DELETE /{roomId}` operation in my `SensorRoomResource` is strictly **idempotent**. 
+
+In RESTful API design, an operation is considered idempotent if sending the exact same request multiple times leaves the server's state exactly the same as if the request had only been executed once. 
+
+Here is exactly what happens in my code if a client mistakenly double-clicks a delete button and sends the same DELETE request for "LIB-301" three times in a row:
+
+* **Request 1:** The server finds "LIB-301" in the `MockDatabase`. It verifies the business logic constraint (ensuring the `sensorIds` list is empty), safely deletes the room from the `ConcurrentHashMap`, and returns a `204 No Content` status. The server state has now changed.
+* **Requests 2 & 3:** When these duplicate requests arrive, the server searches the database for "LIB-301" and finds nothing. My code explicitly catches this `null` result and returns a `404 Not Found` error. 
+
+Even though the HTTP response code sent back to the client changes (from a 204 success to a 404 error), the actual *data state on the server* does not change after the first successful request. No accidental deletions occur, the database doesn't crash, and no orphan data is created. Because the server state remains completely stable and unchanged during repeated identical requests, the operation perfectly satisfies the requirement of idempotency.
+
+---
