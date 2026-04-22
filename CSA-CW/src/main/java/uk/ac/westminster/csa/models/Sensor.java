@@ -4,6 +4,9 @@
  */
 package uk.ac.westminster.csa.models;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 /**
  *
  * @author DELL
@@ -14,6 +17,9 @@ public class Sensor {
     private String status;
     private double currentValue;
     private String roomId;
+    
+    //A thread-safe list to store the historical readings
+    private List<Reading> readingHistory = new CopyOnWriteArrayList<>();
 
     public Sensor() {
     }
@@ -67,6 +73,15 @@ public class Sensor {
     public void setRoomId(String roomId) {
         this.roomId = roomId;
     }
+
+    public List<Reading> getReadingHistory() {
+        return readingHistory;
+    }
+
+    public void setReadingHistory(List<Reading> readingHistory) {
+        this.readingHistory = readingHistory;
+    }
+    
     
     
 }
