@@ -66,3 +66,37 @@ Here is exactly what happens in my code if a client mistakenly double-clicks a d
 Even though the HTTP response code sent back to the client changes (from a 204 success to a 404 error), the actual *data state on the server* does not change after the first successful request. No accidental deletions occur, the database doesn't crash, and no orphan data is created. Because the server state remains completely stable and unchanged during repeated identical requests, the operation perfectly satisfies the requirement of idempotency.
 
 ---
+
+## 📡 Part 3: Sensor Operations & Linking
+
+> **Question 3.1:** We explicitly use the `@Consumes(MediaType.APPLICATION_JSON)` annotation on the POST method. Explain the technical consequences if a client attempts to send data in a different format, such as `text/plain` or `application/xml`. How does JAX-RS handle this mismatch?
+
+### 💡 Answer
+
+By adding `@Consumes(MediaType.APPLICATION_JSON)` to my POST method, I am establishing a strict "contract" between the client and my server regarding the expected data format. 
+
+If a client ignores this contract and attempts to send a payload formatted as `text/plain` or `application/xml`, the JAX-RS runtime acts as a protective shield. It intercepts the incoming HTTP request *before* it even reaches my `registerSensor` Java method. 
+
+Because the `Content-Type` header of the client's request does not match the `@Consumes` annotation, JAX-RS will automatically reject the request and return an **HTTP 415 Unsupported Media Type** error to the client. 
+
+This architectural feature has two major technical consequences:
+1. **Application Stability:** It prevents my Java code from throwing ugly, unhandled parsing exceptions (like trying to force XML data into a Jackson JSON parser). 
+2. **Separation of Concerns:** The framework handles the repetitive content-negotiation and validation logic automatically, allowing my resource classes to focus purely on the actual business logic of registering the sensor.
+
+---
+
+> **Question 3.2:** You implemented this filtering using `@QueryParam`. Contrast this with an alternative design where the type is part of the URL path (e.g., `/api/v1/sensors/type/CO2`). Why is the query parameter approach generally considered superior for filtering and searching collections?
+
+### 💡 Answer
+
+While both approaches technically work to return filtered data, using `@QueryParam` is significantly superior because it adheres much closer to core RESTful design principles.
+
+In REST, the **URL Path** should be used strictly to identify resources or sub-resources. For example, `/sensors/SENS-001` clearly identifies a specific, unique entity. If I used `/sensors/type/CO2`, I am incorrectly treating "type" and "CO2" as hierarchical sub-folders, which makes the API rigid. 
+
+Conversely, **Query Parameters** (e.g., `/sensors?type=CO2`) are designed specifically for modifying, sorting, or filtering an established collection. This approach is superior for several reasons:
+
+* **Optionality:** Query parameters are inherently optional. The base URL `/sensors` still makes perfect sense on its own (returning all sensors), while `?type=CO2` simply modifies that base request. Path parameters, however, are usually mandatory, forcing you to create multiple overlapping endpoint methods.
+* **Scalability for Complex Searches:** If the university later wants to filter by multiple criteria—such as CO2 sensors that are currently active—query parameters handle this elegantly (`/sensors?type=CO2&status=active`). Trying to build complex, multi-variable searches using path parameters quickly devolves into long, unreadable, and brittle URLs (like `/sensors/type/CO2/status/active`). 
+* **Standardization:** It follows industry-standard conventions, making the API more intuitive for frontend developers to consume without having to constantly check the documentation.
+
+---
