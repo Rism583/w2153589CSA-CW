@@ -84,7 +84,20 @@ public class SensorResource {
         // Standard REST response for creation
         return Response.status(Response.Status.CREATED).entity(sensor).build();
     }
-    
+    /**
+     * Standard REST GET for a single sensor by ID.
+     */
+    @GET
+    @Path("/{id}")
+    public Response getSensor(@PathParam("id") String id) {
+        Sensor sensor = db.getSensors().get(id);
+        if (sensor == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity("{\"error\":\"Sensor not found\"}")
+                           .build();
+        }
+        return Response.ok(sensor).build();
+    }
     /**
      * Part 4.1: Sub-Resource Locator Pattern.
      * Notice there is NO @GET or @POST here! JAX-RS sees the missing verb 
