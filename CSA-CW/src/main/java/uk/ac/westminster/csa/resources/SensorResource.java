@@ -84,4 +84,14 @@ public class SensorResource {
         // Standard REST response for creation
         return Response.status(Response.Status.CREATED).entity(sensor).build();
     }
+    
+    /**
+     * Part 4.1: Sub-Resource Locator Pattern.
+     * Notice there is NO @GET or @POST here! JAX-RS sees the missing verb 
+     * and delegates the entire request to the SensorReadingResource class.
+     */
+    @Path("/{sensorId}/readings")
+    public SensorReadingResource getReadingResource(@PathParam("sensorId") String sensorId) {
+        return new SensorReadingResource(sensorId);
+    }
 }
