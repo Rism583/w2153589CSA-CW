@@ -8,6 +8,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import uk.ac.westminster.csa.dao.MockDatabase;
+import uk.ac.westminster.csa.exceptions.RoomNotEmptyException;
 import uk.ac.westminster.csa.models.Room;
 
 /**
@@ -88,14 +89,9 @@ public class SensorRoomResource {
                            .build();
         }
 
-        // 2. Business Logic Constraint: Prevent data orphans
+        // 2. CHECK RULE: Are there sensors in the room?
         if (!room.getSensorIds().isEmpty()) {
-            // The spec requires blocking the request if sensors exist.
-            // Returning 409 Conflict with a custom JSON error message.
-            // (We will formalize this into a Custom Exception Mapper in Part 5)
-            return Response.status(Response.Status.CONFLICT)
-                           .entity("{\"error\":\"Cannot delete room: It still contains active sensors.\"}")
-                           .build();
+            throw new RoomNotEmptyException("Cannot delete room: It is currently occupied by active hardware sensors.");
         }
 
         // 3. Safe to delete
