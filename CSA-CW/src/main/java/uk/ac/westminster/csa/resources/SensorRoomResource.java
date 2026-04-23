@@ -27,6 +27,8 @@ public class SensorRoomResource {
      */
     @GET
     public Response getAllRooms() {
+        
+        
         // Returning the values from the ConcurrentHashMap.
         // Jackson will automatically serialize this Collection into a JSON array.
         return Response.ok(db.getRooms().values()).build();
