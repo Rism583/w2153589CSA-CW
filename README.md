@@ -116,3 +116,18 @@ By implementing the **Sub-Resource Locator pattern**, I structured the API in a 
 3. **Team Scalability:** If the university decides later that they want to add even deeper nested paths (for example, `/sensors/{id}/readings/{rid}/calibrations`), I can just chain another sub-resource locator. This modular approach means a team of developers could work on different sub-resources at the same time without constantly causing Git merge conflicts in one massive file.
 
 ---
+
+## 🚦 Part 5: Exception Handling & Observability
+
+> **Question 5.2:** Why is HTTP 422 often considered more semantically accurate than a standard 404 when the issue is a missing reference inside a valid JSON payload?
+
+### 💡 Answer
+
+When I initially started building the validation logic, my first instinct was to return an `HTTP 404 Not Found` or an `HTTP 400 Bad Request` if a sensor tried to connect to a non-existent room. However, after looking deeper into REST API standards, I realized that `HTTP 422 Unprocessable Entity` is far more precise for this specific scenario.
+
+Here is my reasoning for this architectural choice:
+* **Why not 400 Bad Request?** A 400 status generally implies that the client sent malformed syntax (like missing a comma or a bracket in the JSON). In this scenario, the client's JSON is perfectly formatted, so a 400 is technically misleading.
+* **Why not 404 Not Found?** A 404 implies that the target URL itself does not exist. But the client is sending a POST request to `/api/v1/sensors`, which is a perfectly valid and active endpoint. Returning a 404 would confuse the client into thinking the sensor endpoint is broken or misspelled.
+* **Why 422 is perfect:** HTTP 422 explicitly states that "the server understands the content type of the request entity, and the syntax of the request entity is correct, but was unable to process the contained instructions." This perfectly describes a foreign-key or dependency violation. The server successfully parsed the JSON body, but it cannot process my business logic because the `roomId` inside the payload references a dependency that does not exist in the system.
+
+---
