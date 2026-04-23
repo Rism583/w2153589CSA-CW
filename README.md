@@ -131,3 +131,18 @@ Here is my reasoning for this architectural choice:
 * **Why 422 is perfect:** HTTP 422 explicitly states that "the server understands the content type of the request entity, and the syntax of the request entity is correct, but was unable to process the contained instructions." This perfectly describes a foreign-key or dependency violation. The server successfully parsed the JSON body, but it cannot process my business logic because the `roomId` inside the payload references a dependency that does not exist in the system.
 
 ---
+
+> **Question 5.4:** From a cybersecurity standpoint, explain the risks associated with exposing internal Java stack traces to external API consumers. What specific information could an attacker gather from such a trace?
+
+### 💡 Answer
+
+Allowing a framework like GlassFish to leak raw Java stack traces to the client is a severe security vulnerability known as **Information Disclosure**. While a stack trace is helpful for a developer debugging locally, it acts as a roadmap for a malicious attacker.
+
+If my API returned a raw stack trace, an attacker could gather the following critical intelligence during the reconnaissance phase of a cyberattack:
+1. **Underlying Technologies & Versions:** The trace reveals exactly what libraries the server is using (e.g., Jackson, Jersey, GlassFish). If an attacker sees an outdated library version in the stack trace, they can easily look up known CVEs (Common Vulnerabilities and Exposures) to exploit it.
+2. **Database Schema Details:** If a database query fails, the stack trace often leaks the exact SQL syntax, table names, and column names, making the API highly susceptible to targeted SQL Injection attacks.
+3. **Internal File Paths:** Stack traces often print the exact directory structure of the server (e.g., `C:/glassfish7/domains/domain1/applications/...`). This gives the attacker a map of the file system, aiding in directory traversal or local file inclusion attacks.
+
+By implementing a `GlobalExceptionMapper` that catches `Throwable`, I ensure that the attacker only ever receives a sanitized `500 Internal Server Error` message, effectively blinding them to the backend architecture.
+
+---
