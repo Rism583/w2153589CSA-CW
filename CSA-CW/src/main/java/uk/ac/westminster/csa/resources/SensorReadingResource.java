@@ -8,6 +8,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import uk.ac.westminster.csa.dao.MockDatabase;
+import uk.ac.westminster.csa.exceptions.SensorUnavailableException;
 import uk.ac.westminster.csa.models.Reading;
 import uk.ac.westminster.csa.models.Sensor;
 
@@ -56,6 +57,11 @@ public class SensorReadingResource {
             return Response.status(Response.Status.NOT_FOUND)
                            .entity("{\"error\":\"Sensor not found\"}")
                            .build();
+        }
+        
+        // STATE CONSTRAINT CHECK: Is the sensor in MAINTENANCE mode?
+        if ("MAINTENANCE".equalsIgnoreCase(sensor.getStatus())) {
+            throw new SensorUnavailableException("Cannot accept readings: Sensor is currently in MAINTENANCE mode.");
         }
 
         // 1. Append the new reading to the history list
