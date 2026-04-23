@@ -146,3 +146,16 @@ If my API returned a raw stack trace, an attacker could gather the following cri
 By implementing a `GlobalExceptionMapper` that catches `Throwable`, I ensure that the attacker only ever receives a sanitized `500 Internal Server Error` message, effectively blinding them to the backend architecture.
 
 ---
+
+> **Question 5.5:** Why is it advantageous to use JAX-RS filters for cross-cutting concerns like logging, rather than manually inserting `Logger.info()` statements inside every single resource method?
+
+### 💡 Answer
+
+Implementing logging via JAX-RS Filters is a textbook example of handling "cross-cutting concerns" (logic that affects the entire application) without cluttering the core architecture.
+
+There are three major architectural advantages to this approach:
+1. **DRY Principle (Don't Repeat Yourself):** If I manually placed `Logger.info()` in every controller method, I would have to write the exact same boilerplate code dozens of times. A filter writes the code once and automatically applies it to every endpoint globally.
+2. **Separation of Concerns:** A controller's only job should be handling business logic (e.g., registering a sensor or deleting a room). By moving logging out of the controller and into a `@Provider` filter, the resource classes remain strictly focused on their primary objectives.
+3. **Guaranteed Execution (Fail-Safe):** If I or another developer adds a new API endpoint in the future and forgets to manually type a logging statement, that endpoint goes completely unmonitored. A global JAX-RS filter acts as an invisible safety net, ensuring *every* request and response is strictly logged at the server level, even for routes that haven't been built yet.
+
+---
