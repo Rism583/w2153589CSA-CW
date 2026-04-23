@@ -13,6 +13,7 @@ import uk.ac.westminster.csa.models.Sensor;
 
 import java.util.Collection;
 import java.util.stream.Collectors;
+import uk.ac.westminster.csa.exceptions.LinkedResourceNotFoundException;
 
 /**
  * Controller for managing Sensor resources at /api/v1/sensors.
@@ -67,11 +68,7 @@ public class SensorResource {
         // 1. INTEGRITY CHECK: Does the room actually exist in our system?
         Room targetRoom = db.getRooms().get(sensor.getRoomId());
         if (targetRoom == null) {
-            // The rubric requires failing if the roomId is fake. 
-            // 400 Bad Request is appropriate for validation failures.
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity("{\"error\":\"Cannot register sensor: The specified roomId does not exist.\"}")
-                           .build();
+            throw new LinkedResourceNotFoundException("Cannot register sensor: The specified roomId does not exist.");
         }
 
         // 2. Save the sensor to the database
