@@ -116,3 +116,46 @@ By implementing the **Sub-Resource Locator pattern**, I structured the API in a 
 3. **Team Scalability:** If the university decides later that they want to add even deeper nested paths (for example, `/sensors/{id}/readings/{rid}/calibrations`), I can just chain another sub-resource locator. This modular approach means a team of developers could work on different sub-resources at the same time without constantly causing Git merge conflicts in one massive file.
 
 ---
+
+## 🚦 Part 5: Exception Handling & Observability
+
+> **Question 5.2:** Why is HTTP 422 often considered more semantically accurate than a standard 404 when the issue is a missing reference inside a valid JSON payload?
+
+### 💡 Answer
+
+When I initially started building the validation logic, my first instinct was to return an `HTTP 404 Not Found` or an `HTTP 400 Bad Request` if a sensor tried to connect to a non-existent room. However, after looking deeper into REST API standards, I realized that `HTTP 422 Unprocessable Entity` is far more precise for this specific scenario.
+
+Here is my reasoning for this architectural choice:
+* **Why not 400 Bad Request?** A 400 status generally implies that the client sent malformed syntax (like missing a comma or a bracket in the JSON). In this scenario, the client's JSON is perfectly formatted, so a 400 is technically misleading.
+* **Why not 404 Not Found?** A 404 implies that the target URL itself does not exist. But the client is sending a POST request to `/api/v1/sensors`, which is a perfectly valid and active endpoint. Returning a 404 would confuse the client into thinking the sensor endpoint is broken or misspelled.
+* **Why 422 is perfect:** HTTP 422 explicitly states that "the server understands the content type of the request entity, and the syntax of the request entity is correct, but was unable to process the contained instructions." This perfectly describes a foreign-key or dependency violation. The server successfully parsed the JSON body, but it cannot process my business logic because the `roomId` inside the payload references a dependency that does not exist in the system.
+
+---
+
+> **Question 5.4:** From a cybersecurity standpoint, explain the risks associated with exposing internal Java stack traces to external API consumers. What specific information could an attacker gather from such a trace?
+
+### 💡 Answer
+
+Allowing a framework like GlassFish to leak raw Java stack traces to the client is a severe security vulnerability known as **Information Disclosure**. While a stack trace is helpful for a developer debugging locally, it acts as a roadmap for a malicious attacker.
+
+If my API returned a raw stack trace, an attacker could gather the following critical intelligence during the reconnaissance phase of a cyberattack:
+1. **Underlying Technologies & Versions:** The trace reveals exactly what libraries the server is using (e.g., Jackson, Jersey, GlassFish). If an attacker sees an outdated library version in the stack trace, they can easily look up known CVEs (Common Vulnerabilities and Exposures) to exploit it.
+2. **Database Schema Details:** If a database query fails, the stack trace often leaks the exact SQL syntax, table names, and column names, making the API highly susceptible to targeted SQL Injection attacks.
+3. **Internal File Paths:** Stack traces often print the exact directory structure of the server (e.g., `C:/glassfish7/domains/domain1/applications/...`). This gives the attacker a map of the file system, aiding in directory traversal or local file inclusion attacks.
+
+By implementing a `GlobalExceptionMapper` that catches `Throwable`, I ensure that the attacker only ever receives a sanitized `500 Internal Server Error` message, effectively blinding them to the backend architecture.
+
+---
+
+> **Question 5.5:** Why is it advantageous to use JAX-RS filters for cross-cutting concerns like logging, rather than manually inserting `Logger.info()` statements inside every single resource method?
+
+### 💡 Answer
+
+Implementing logging via JAX-RS Filters is a textbook example of handling "cross-cutting concerns" (logic that affects the entire application) without cluttering the core architecture.
+
+There are three major architectural advantages to this approach:
+1. **DRY Principle (Don't Repeat Yourself):** If I manually placed `Logger.info()` in every controller method, I would have to write the exact same boilerplate code dozens of times. A filter writes the code once and automatically applies it to every endpoint globally.
+2. **Separation of Concerns:** A controller's only job should be handling business logic (e.g., registering a sensor or deleting a room). By moving logging out of the controller and into a `@Provider` filter, the resource classes remain strictly focused on their primary objectives.
+3. **Guaranteed Execution (Fail-Safe):** If I or another developer adds a new API endpoint in the future and forgets to manually type a logging statement, that endpoint goes completely unmonitored. A global JAX-RS filter acts as an invisible safety net, ensuring *every* request and response is strictly logged at the server level, even for routes that haven't been built yet.
+
+---
