@@ -60,7 +60,8 @@ curl -X POST http://localhost:8080/CSA-CW/api/v1/sensors/SENS-001/readings \
 
 # 5. Retrieve Sensors dynamically filtered by type (GET)
 curl -X GET "http://localhost:8080/CSA-CW/api/v1/sensors?type=CO2" \
--H "Accept: application/json" ```bash
+-H "Accept: application/json"
+```
 
 
 # 🎓 w2153589 CSA-CW
