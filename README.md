@@ -1,3 +1,68 @@
+# Smart Campus Sensor & Room Management API
+
+**Module:** 5COSC022W Client-Server Architectures  
+**Student:** Rismeya Kamalachandran  
+
+---
+
+## 1. API Design Overview
+
+This project is a RESTful web service built for the university's "Smart Campus" initiative. It is developed using Java and the JAX-RS (Jakarta RESTful Web Services) framework to manage physical campus `Rooms`, hardware `Sensors` (e.g., CO2 and Temperature monitors), and historical `SensorReadings`.
+
+Key architectural decisions include:
+* **Thread-Safe In-Memory Data:** As external databases were strictly prohibited by the specification, I utilized thread-safe Java collections (`ConcurrentHashMap` and `CopyOnWriteArrayList`) to simulate a persistent data store. This prevents data loss and race conditions during concurrent client requests.
+* **Sub-Resource Locator Pattern:** To handle the deep nesting of historical sensor readings (`/sensors/{id}/readings`), I delegated the endpoint logic to a separate `SensorReadingResource` class. This prevents the main controller from becoming bloated and adheres to the Single Responsibility Principle.
+* **Custom Exception Handling:** The API features a robust, leak-proof error handling architecture. I implemented custom JAX-RS `ExceptionMapper` classes to catch specific runtime exceptions and translate them into appropriate HTTP status codes (e.g., 409 Conflict, 422 Unprocessable Entity, 403 Forbidden) with clean JSON payloads, completely hiding internal Java stack traces from consumers.
+* **Global Observability:** A custom JAX-RS Filter (`ContainerRequestFilter` and `ContainerResponseFilter`) is implemented to automatically log all incoming HTTP requests and outgoing response status codes to the server console.
+
+---
+
+## 2. Build & Launch Instructions
+
+Follow these step-by-step instructions to build the project and launch the API locally using NetBeans and GlassFish:
+
+1. **Clone the Repository:** Clone or download this GitHub repository to your local machine.
+2. **Open in IDE:** Open the project folder in Apache NetBeans (or your preferred Java EE IDE).
+3. **Clean and Build:** Right-click the project in the 'Projects' window and select **Clean and Build**. Maven will automatically resolve the JAX-RS dependencies and compile the source code.
+4. **Deploy the Server:** Right-click the project and select **Run**. This will boot up the GlassFish Server and deploy the application.
+5. **Verify the Deployment:** Once the server is running, open a browser or Postman and navigate to the Discovery Endpoint: `http://localhost:8080/CSA-CW/api/v1`. You should receive a JSON response containing the API metadata.
+
+---
+
+## 3. Sample cURL Commands
+
+Below are five sample `curl` commands demonstrating successful interactions with different parts of the API. 
+
+**1. Create a new Room (POST)**
+## 3. Sample cURL Commands
+
+Below are five sample `curl` commands demonstrating successful interactions with different parts of the API. 
+
+```bash
+# 1. Create a new Room (POST)
+curl -X POST http://localhost:8080/CSA-CW/api/v1/rooms \
+-H "Content-Type: application/json" \
+-d "{\"id\": \"LEC-101\", \"name\": \"Main Lecture Hall\", \"capacity\": 150}"
+
+# 2. Retrieve a list of all Rooms (GET)
+curl -X GET http://localhost:8080/CSA-CW/api/v1/rooms \
+-H "Accept: application/json"
+
+# 3. Register a new Sensor linked to the created Room (POST)
+curl -X POST http://localhost:8080/CSA-CW/api/v1/sensors \
+-H "Content-Type: application/json" \
+-d "{\"id\": \"SENS-001\", \"roomId\": \"LEC-101\", \"type\": \"CO2\", \"status\": \"ACTIVE\"}"
+
+# 4. Add a historical reading to the Sensor via Sub-Resource (POST)
+curl -X POST http://localhost:8080/CSA-CW/api/v1/sensors/SENS-001/readings \
+-H "Content-Type: application/json" \
+-d "{\"value\": 415.5}"
+
+# 5. Retrieve Sensors dynamically filtered by type (GET)
+curl -X GET "http://localhost:8080/CSA-CW/api/v1/sensors?type=CO2" \
+-H "Accept: application/json" ```bash
+
+
 # 🎓 w2153589 CSA-CW
 
 ---
