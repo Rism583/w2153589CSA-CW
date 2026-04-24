@@ -54,15 +54,13 @@ public class SensorRoomResource {
      * Part 2.1: POST / - Enable creation of new rooms.
      */
     @POST
-    public Response createRoom(Room room) {
-        // Basic validation
+    public Response createRoom(Room room, @jakarta.ws.rs.core.Context jakarta.ws.rs.core.UriInfo uriInfo) {
         if (room.getId() == null || room.getId().trim().isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
                            .entity("{\"error\":\"Room ID is required\"}")
                            .build();
         }
 
-        // Checking if room already exists
         if (db.getRooms().containsKey(room.getId())) {
             return Response.status(Response.Status.CONFLICT)
                            .entity("{\"error\":\"Room with this ID already exists\"}")
@@ -71,9 +69,11 @@ public class SensorRoomResource {
 
         db.getRooms().put(room.getId(), room);
         
-        // The spec requires "appropriate feedback upon success". 
-        // 201 Created is the standard RESTful response for a successful POST.
-        return Response.status(Response.Status.CREATED).entity(room).build();
+        // This builds the URI for the Location header (e.g., /api/v1/rooms/LIB-301)
+        java.net.URI location = uriInfo.getAbsolutePathBuilder().path(room.getId()).build();
+        
+        // Response.created() automatically sets the 201 status AND the Location header
+        return Response.created(location).entity(room).build();
     }
 
     /**
@@ -102,5 +102,16 @@ public class SensorRoomResource {
         // 204 No Content is the standard response for successful deletion 
         // when there is no response body to return.
         return Response.noContent().build();
+    }
+    
+    /**
+     * Endpoint specifically created to trigger a 500 error for the video demonstration.
+     */
+    @GET
+    @Path("/crash-test")
+    public Response triggerCrash() {
+        String broken = null;
+        broken.length(); // This will deliberately throw a NullPointerException
+        return Response.ok().build(); 
     }
 }
